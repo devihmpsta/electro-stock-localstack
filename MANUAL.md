@@ -1,4 +1,4 @@
-# Panduan Penggunaan & Setup ElectroStock (Multi-Device)
+# Panduan Penggunaan & Setup ElectroStock
 
 ElectroStock adalah sistem manajemen stok dan inventaris modern berbasis **Flask** yang berjalan di atas kontainer **Docker**. Panduan ini akan memandu Anda melakukan setup awal pada komputer server (host) dan cara mengakses aplikasi menggunakan peramban (browser) di perangkat lain (smartphone, tablet, atau laptop lain) yang berada dalam satu jaringan lokal.
 
