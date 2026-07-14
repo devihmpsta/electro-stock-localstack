@@ -1,0 +1,226 @@
+{% extends 'base.html' %}
+
+{% block title %}Analytics - ElectroStock{% endblock %}
+
+{% block content %}
+<div class="row pt-2 mb-3 align-items-center">
+    <div class="col-md-8">
+        <h1 class="hero-title mb-1">Visualisasi & Analisis</h1>
+        <p class="text-muted">Analisis komposisi kategori barang, sebaran stok, dan status kritis tingkat inventaris Anda.</p>
+    </div>
+</div>
+
+{% with messages = get_flashed_messages(with_categories=true) %}
+    {% if messages %}
+        {% for category, message in messages %}
+            <div class="alert alert-{{ category }} alert-dismissible fade show" role="alert">
+                {{ message }}
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="alert" aria-label="Close"></button>
+            </div>
+        {% endfor %}
+    {% endif %}
+{% endwith %}
+
+<!-- Top row: Low Stock Card Indicator -->
+<div class="row g-4 mb-4">
+    <div class="col-12">
+        <div class="card p-3 shadow-sm border-0" style="background: linear-gradient(135deg, rgba(255, 180, 171, 0.08) 0%, var(--color-surface-container) 100%); border: 1px solid rgba(255, 180, 171, 0.2) !important;">
+            <div class="d-flex align-items-center justify-content-between flex-wrap gap-3">
+                <div class="d-flex align-items-center gap-3">
+                    <div class="icon-box" style="width: 48px; height: 48px; background: rgba(255, 180, 171, 0.12); border-color: rgba(255, 180, 171, 0.25);">
+                        <i data-lucide="alert-triangle" class="text-danger" style="width: 24px; height: 24px;"></i>
+                    </div>
+                    <div>
+                        <h5 class="text-white fw-bold mb-1">Barang Hampir Habis (Low Stock)</h5>
+                        <p class="text-secondary mb-0">Terdapat <strong class="text-danger font-mono" style="font-size: 1.1rem;">{{ low_stock_count }}</strong> barang dengan stok kurang dari atau sama dengan 5 unit.</p>
+                    </div>
+                </div>
+                {% if low_stock_count > 0 %}
+                <a href="{{ url_for('barang.index', search='', category_id='') }}" class="btn-secondary text-danger border-danger-subtle d-inline-flex gap-1" style="font-size: 0.85rem; color: var(--color-error) !important; padding: 8px 16px !important;">
+                    <i data-lucide="eye" style="width: 16px; height: 16px;"></i> Tinjau Inventaris
+                </a>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Charts Row -->
+<div class="row g-4 mb-5">
+    <!-- Pie Chart -->
+    <div class="col-md-6">
+        <div class="card h-100">
+            <div class="card-header mb-4">
+                <h5 class="card-title fw-bold text-white d-flex align-items-center gap-2">
+                    <i data-lucide="pie-chart" class="text-cyan" style="width: 20px; height: 20px;"></i> Komposisi Barang per Kategori
+                </h5>
+            </div>
+            <div class="card-body p-0 d-flex align-items-center justify-content-center" style="min-height: 320px;">
+                {% if pie_data and pie_data | sum > 0 %}
+                <div style="width: 100%; max-width: 280px; margin: 0 auto;">
+                    <canvas id="pieChart"></canvas>
+                </div>
+                {% else %}
+                <div class="empty-state w-100 border-0 m-0">
+                    <div class="empty-state-icon">
+                        <i data-lucide="inbox" class="text-muted" style="width: 48px; height: 48px;"></i>
+                    </div>
+                    <p class="text-muted mt-3 mb-0">Tidak ada data untuk ditampilkan.</p>
+                </div>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+
+    <!-- Bar Chart -->
+    <div class="col-md-6">
+        <div class="card h-100">
+            <div class="card-header mb-4">
+                <h5 class="card-title fw-bold text-white d-flex align-items-center gap-2">
+                    <i data-lucide="bar-chart-3" class="text-cyan" style="width: 20px; height: 20px;"></i> Jumlah Stok per Kategori
+                </h5>
+            </div>
+            <div class="card-body p-0 d-flex align-items-center justify-content-center" style="min-height: 320px;">
+                {% if bar_data and bar_data | sum > 0 %}
+                <div style="width: 100%; height: 100%; min-height: 250px; position: relative;">
+                    <canvas id="barChart"></canvas>
+                </div>
+                {% else %}
+                <div class="empty-state w-100 border-0 m-0">
+                    <div class="empty-state-icon">
+                        <i data-lucide="inbox" class="text-muted" style="width: 48px; height: 48px;"></i>
+                    </div>
+                    <p class="text-muted mt-3 mb-0">Tidak ada data untuk ditampilkan.</p>
+                </div>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+</div>
+
+<div id="analytics-data"
+     data-pie-labels='{{ pie_labels | tojson }}'
+     data-pie-data='{{ pie_data | tojson }}'
+     data-bar-labels='{{ bar_labels | tojson }}'
+     data-bar-data='{{ bar_data | tojson }}'>
+</div>
+
+<!-- Chart.js Script Configuration -->
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<script>
+    document.addEventListener('DOMContentLoaded', () => {
+        const dataEl = document.getElementById('analytics-data');
+        if (!dataEl) return;
+
+        const pieLabels = JSON.parse(dataEl.dataset.pieLabels || '[]');
+        const pieData = JSON.parse(dataEl.dataset.pieData || '[]');
+        const barLabels = JSON.parse(dataEl.dataset.barLabels || '[]');
+        const barData = JSON.parse(dataEl.dataset.barData || '[]');
+
+        let pieChart = null;
+        let barChart = null;
+
+        const renderCharts = (activeTheme) => {
+            const isLight = activeTheme === 'light';
+            
+            // Grid and label colors from Design System
+            const textColor = isLight ? '#475569' : '#c2c6d8';
+            const gridColor = isLight ? 'rgba(15, 23, 42, 0.05)' : 'rgba(255, 255, 255, 0.04)';
+            
+            // Reusable color maps
+            const primaryColor = isLight ? '#0058cb' : '#b0c6ff';
+            const primaryContainer = isLight ? '#d9e2ff' : '#568dff';
+            const secondaryColor = isLight ? '#2f2ebe' : '#c0c1ff';
+            const tertiaryColor = isLight ? '#7f2b00' : '#ffb599';
+            const errorColor = isLight ? '#ba1a1a' : '#ffb4ab';
+            const emeraldColor = '#10b981';
+
+            // 1. Pie Chart
+            const pieCanvas = document.getElementById('pieChart');
+            if (pieCanvas) {
+                if (pieChart) pieChart.destroy();
+                const pieCtx = pieCanvas.getContext('2d');
+                pieChart = new Chart(pieCtx, {
+                    type: 'pie',
+                    data: {
+                        labels: pieLabels,
+                        datasets: [{
+                            data: pieData,
+                            backgroundColor: [
+                                primaryContainer,
+                                secondaryColor,
+                                emeraldColor,
+                                errorColor,
+                                tertiaryColor
+                            ],
+                            borderColor: isLight ? '#ffffff' : '#0b1326',
+                            borderWidth: 2
+                        }]
+                    },
+                    options: {
+                        responsive: true,
+                        plugins: {
+                            legend: {
+                                position: 'bottom',
+                                labels: {
+                                    color: textColor,
+                                    font: { family: 'Geist Sans', size: 12 },
+                                    padding: 15
+                                }
+                            }
+                        }
+                    }
+                });
+            }
+
+            // 2. Bar Chart
+            const barCanvas = document.getElementById('barChart');
+            if (barCanvas) {
+                if (barChart) barChart.destroy();
+                const barCtx = barCanvas.getContext('2d');
+                barChart = new Chart(barCtx, {
+                    type: 'bar',
+                    data: {
+                        labels: barLabels,
+                        datasets: [{
+                            label: 'Stok',
+                            data: barData,
+                            backgroundColor: isLight ? 'rgba(0, 88, 203, 0.15)' : 'rgba(86, 141, 255, 0.15)',
+                            borderColor: primaryContainer,
+                            borderWidth: 1.5,
+                            borderRadius: 6
+                        }]
+                    },
+                    options: {
+                        responsive: true,
+                        maintainAspectRatio: false,
+                        scales: {
+                            x: {
+                                grid: { color: gridColor },
+                                ticks: { color: textColor, font: { family: 'Geist Sans' } }
+                            },
+                            y: {
+                                grid: { color: gridColor },
+                                ticks: { color: textColor, font: { family: 'Geist Sans' } },
+                                beginAtZero: true
+                            }
+                        },
+                        plugins: {
+                            legend: { display: false }
+                        }
+                    }
+                });
+            }
+        };
+
+        // Initial render
+        const initialTheme = document.documentElement.getAttribute('data-theme') || 'dark';
+        renderCharts(initialTheme);
+
+        // Listen for live theme changes to update chart styling dynamically
+        window.addEventListener('theme-changed', (e) => {
+            renderCharts(e.detail);
+        });
+    });
+</script>
+{% endblock %}

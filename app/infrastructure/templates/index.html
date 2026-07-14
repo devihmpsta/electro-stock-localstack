@@ -1,0 +1,173 @@
+{% extends 'base.html' %}
+
+{% block title %}Dashboard - ElectroStock{% endblock %}
+
+{% block content %}
+<div class="row pt-2 mb-3 align-items-center">
+    <div class="col-md-8">
+        <h1 class="hero-title mb-1">ElectroStock Dashboard</h1>
+        <p class="text-muted">Overview of your system stock metrics, low items, and recent transaction history.</p>
+    </div>
+</div>
+
+<!-- Metrics Cards Section -->
+<div class="row g-4 mb-5">
+    <div class="col-md-4">
+        <div class="card h-100">
+            <div class="card-body d-flex align-items-center justify-content-between p-2">
+                <div>
+                    <h6 class="text-uppercase text-muted fw-bold mb-1" style="font-size: 0.75rem; letter-spacing: 0.05em;">Total Barang</h6>
+                    <h2 class="fw-bold mb-0 text-white font-mono" style="font-size: 2.25rem;">{{ total_barang }}</h2>
+                </div>
+                <div class="icon-box" style="width: 48px; height: 48px;">
+                    <i data-lucide="package" style="width: 24px; height: 24px;"></i>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <div class="col-md-4">
+        <div class="card h-100">
+            <div class="card-body d-flex align-items-center justify-content-between p-2">
+                <div>
+                    <h6 class="text-uppercase text-muted fw-bold mb-1" style="font-size: 0.75rem; letter-spacing: 0.05em;">Total Stok</h6>
+                    <h2 class="fw-bold mb-0 text-white font-mono" style="font-size: 2.25rem;">{{ total_stok }}</h2>
+                </div>
+                <div class="icon-box" style="width: 48px; height: 48px;">
+                    <i data-lucide="trending-up" style="width: 24px; height: 24px;"></i>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="col-md-4">
+        <div class="card h-100">
+            <div class="card-body d-flex align-items-center justify-content-between p-2">
+                <div>
+                    <h6 class="text-uppercase text-muted fw-bold mb-1" style="font-size: 0.75rem; letter-spacing: 0.05em;">Jumlah Kategori</h6>
+                    <h2 class="fw-bold mb-0 text-white font-mono" style="font-size: 2.25rem;">{{ jumlah_kategori }}</h2>
+                </div>
+                <div class="icon-box" style="width: 48px; height: 48px;">
+                    <i data-lucide="tag" style="width: 24px; height: 24px;"></i>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="row g-4 mb-5">
+    <!-- Low Stock Items Card -->
+    <div class="col-lg-6">
+        <div class="card card-table h-100">
+            <div class="card-header d-flex justify-content-between align-items-center mb-4">
+                <h5 class="card-title fw-bold text-white d-flex align-items-center gap-2">
+                    <i data-lucide="alert-triangle" class="text-danger" style="width: 20px; height: 20px;"></i> Barang Hampir Habis
+                </h5>
+                <span class="status-pill low-stock">
+                    <span class="status-dot amber pulse"></span> Stok &le; 5
+                </span>
+            </div>
+            <div class="card-body p-0">
+                {% if low_stock_items %}
+                <div class="table-responsive">
+                    <table class="table align-middle">
+                        <thead>
+                            <tr>
+                                <th>Kode</th>
+                                <th>Nama Barang</th>
+                                <th class="text-center">Stok</th>
+                                <th class="text-end">Harga</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for item in low_stock_items %}
+                            <tr>
+                                <td class="font-mono text-cyan fw-semibold">{{ item.kode_barang }}</td>
+                                <td>{{ item.nama_barang }}</td>
+                                <td class="text-center">
+                                    <span class="status-pill low-stock font-mono">
+                                        <span class="status-dot amber pulse"></span> {{ item.stok }}
+                                    </span>
+                                </td>
+                                <td class="text-end font-mono">Rp {{ "{:,.2f}".format(item.harga) }}</td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+                {% else %}
+                <div class="empty-state">
+                    <div class="empty-state-icon">
+                        <i data-lucide="check-circle-2" class="text-success" style="width: 48px; height: 48px;"></i>
+                    </div>
+                    <p class="text-muted mt-3 mb-0">Semua stok barang dalam kondisi aman.</p>
+                </div>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+
+    <!-- Recent Stock History Card -->
+    <div class="col-lg-6">
+        <div class="card h-100">
+            <div class="card-header d-flex justify-content-between align-items-center mb-4">
+                <h5 class="card-title fw-bold text-white d-flex align-items-center gap-2">
+                    <i data-lucide="history" class="text-cyan" style="width: 20px; height: 20px;"></i> Riwayat Stok Terbaru
+                </h5>
+            </div>
+            <div class="card-body p-0">
+                {% if recent_histories %}
+                <div class="timeline-wrapper">
+                    <ul class="list-unstyled mb-0">
+                        {% for history in recent_histories %}
+                        <li class="mb-4 d-flex align-items-start position-relative">
+                            <div class="me-3">
+                                {% if history.jenis_transaksi == 'masuk' %}
+                                <div class="icon-box" style="width: 32px; height: 32px; background: rgba(16, 185, 129, 0.12); border-color: rgba(16, 185, 129, 0.25);">
+                                    <i data-lucide="arrow-down-left" class="text-success" style="width: 16px; height: 16px;"></i>
+                                </div>
+                                {% elif history.jenis_transaksi == 'keluar' %}
+                                <div class="icon-box" style="width: 32px; height: 32px; background: rgba(239, 68, 68, 0.12); border-color: rgba(239, 68, 68, 0.25);">
+                                    <i data-lucide="arrow-up-right" class="text-danger" style="width: 16px; height: 16px;"></i>
+                                </div>
+                                {% else %}
+                                <div class="icon-box" style="width: 32px; height: 32px; background: rgba(243, 100, 32, 0.12); border-color: rgba(243, 100, 32, 0.25);">
+                                    <i data-lucide="edit-3" class="text-warning" style="width: 16px; height: 16px;"></i>
+                                </div>
+                                {% endif %}
+                            </div>
+                            
+                            <div class="flex-grow-1">
+                                <div class="d-flex justify-content-between align-items-center">
+                                    <h6 class="text-white fw-bold mb-0" style="font-size: 0.95rem;">
+                                        {{ history.barang.nama_barang }}
+                                    </h6>
+                                    <span class="text-muted font-mono" style="font-size: 0.75rem;">
+                                        {{ history.created_at.strftime('%d %b %Y, %H:%M') }}
+                                    </span>
+                                </div>
+                                <div class="mt-1 d-flex align-items-center gap-2" style="font-size: 0.85rem;">
+                                    <span class="fw-semibold {% if history.jenis_transaksi == 'masuk' %}text-success{% elif history.jenis_transaksi == 'keluar' %}text-danger{% else %}text-warning{% endif %}">
+                                        {{ history.jenis_transaksi | capitalize }} <span class="font-mono">({{ history.jumlah }})</span>
+                                    </span>
+                                    <span class="text-muted">&bull;</span>
+                                    <span class="text-secondary">{{ history.keterangan or '-' }}</span>
+                                </div>
+                            </div>
+                        </li>
+                        {% endfor %}
+                    </ul>
+                </div>
+                {% else %}
+                <div class="empty-state">
+                    <div class="empty-state-icon">
+                        <i data-lucide="archive" class="text-muted" style="width: 48px; height: 48px;"></i>
+                    </div>
+                    <p class="text-muted mt-3 mb-0">Belum ada riwayat transaksi stok.</p>
+                </div>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

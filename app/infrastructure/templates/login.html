@@ -1,0 +1,43 @@
+{% extends 'base.html' %}
+
+{% block title %}Login - ElectroStock{% endblock %}
+
+{% block content %}
+<div class="auth-wrapper">
+    <div class="auth-card">
+        <div class="auth-header">
+            <div class="icon-box mx-auto mb-3" style="width: 48px; height: 48px;">
+                <i data-lucide="lock" style="width: 24px; height: 24px;"></i>
+            </div>
+            <h2 class="auth-title">Sign In</h2>
+            <p class="auth-subtitle">Access your ElectroStock Dashboard</p>
+        </div>
+
+        {% with messages = get_flashed_messages(with_categories=true) %}
+            {% if messages %}
+                {% for category, message in messages %}
+                    <div class="alert alert-{{ category }}">
+                        {{ message }}
+                    </div>
+                {% endfor %}
+            {% endif %}
+        {% endwith %}
+
+        <form action="{{ url_for('auth.login') }}" method="POST">
+            <div class="form-group">
+                <label for="username" class="form-label">Username</label>
+                <input type="text" id="username" name="username" class="form-control" placeholder="Enter username" required autofocus>
+            </div>
+            
+            <div class="form-group">
+                <label for="password" class="form-label">Password</label>
+                <input type="password" id="password" name="password" class="form-control" placeholder="Enter password" required>
+            </div>
+
+            <button type="submit" class="btn-primary w-100">
+                <i data-lucide="log-in" style="width: 18px; height: 18px;"></i> Sign In
+            </button>
+        </form>
+    </div>
+</div>
+{% endblock %}

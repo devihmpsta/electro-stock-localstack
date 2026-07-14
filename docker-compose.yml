@@ -1,0 +1,133 @@
+services:
+  # ─── Flask Application ────────────────────────────────────────────────
+  web:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    image: electro-stock:latest
+    container_name: electro-stock-web
+    ports:
+      - "5000:5000"
+    volumes:
+      - .:/app
+      - /app/.venv
+    environment:
+      - FLASK_APP=app
+      - FLASK_ENV=development
+      - FLASK_DEBUG=1
+      - SECRET_KEY=dev-secret-key-electrostock-compose
+      - PORT=5000
+      # PostgreSQL connection
+      - DATABASE_HOST=postgres
+      - DATABASE_PORT=5432
+      - DATABASE_NAME=electrostock
+      - DATABASE_USER=electrostock_user
+      - DATABASE_PASSWORD=electrostock_pass
+      # LocalStack endpoint
+      - AWS_ENDPOINT_URL=http://localstack:4566
+      - AWS_DEFAULT_REGION=ap-southeast-1
+      - AWS_ACCESS_KEY_ID=test
+      - AWS_SECRET_ACCESS_KEY=test
+    depends_on:
+      postgres:
+        condition: service_healthy
+      localstack:
+        condition: service_healthy
+    networks:
+      - electrostock-network
+    command: flask run --host=0.0.0.0 --port=5000
+    restart: unless-stopped
+
+  # ─── PostgreSQL Database ──────────────────────────────────────────────
+  postgres:
+    image: postgres:16-alpine
+    container_name: electro-stock-postgres
+    ports:
+      - "5432:5432"
+    environment:
+      - POSTGRES_DB=electrostock
+      - POSTGRES_USER=electrostock_user
+      - POSTGRES_PASSWORD=electrostock_pass
+    volumes:
+      - electrostock-postgres-data:/var/lib/postgresql/data
+    networks:
+      - electrostock-network
+    healthcheck:
+      test: [ "CMD-SHELL", "pg_isready -U electrostock_user -d electrostock" ]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    restart: unless-stopped
+
+  # ─── LocalStack (AWS Emulator) ────────────────────────────────────────
+  localstack:
+    image: localstack/localstack:3.8.0
+    container_name: electro-stock-localstack
+    ports:
+      - "4566:4566"
+    environment:
+      - SERVICES=s3,ec2,sqs,sns,dynamodb,lambda,iam
+      - DEBUG=0
+      - PERSISTENCE=1
+      - AWS_DEFAULT_REGION=ap-southeast-1
+    volumes:
+      - electrostock-localstack-data:/var/lib/localstack
+      - /var/run/docker.sock:/var/run/docker.sock
+    networks:
+      - electrostock-network
+    healthcheck:
+      test: [ "CMD-SHELL", "curl -f http://localhost:4566/_localstack/health || exit 1" ]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    restart: unless-stopped
+
+  # ─── Stackport (AWS Resource Browser UI) ──────────────────────────────
+  stackport:
+    image: davireis/stackport:latest
+    container_name: electro-stock-stackport
+    ports:
+      - "8080:8080"
+    environment:
+      - AWS_ENDPOINT_URL=http://localstack:4566
+      - AWS_DEFAULT_REGION=ap-southeast-1
+      - AWS_ACCESS_KEY_ID=test
+      - AWS_SECRET_ACCESS_KEY=test
+    depends_on:
+      localstack:
+        condition: service_healthy
+    networks:
+      - electrostock-network
+    restart: unless-stopped
+
+  # ─── pgAdmin (PostgreSQL Database Management UI) ──────────────────────
+  pgadmin:
+    image: dpage/pgadmin4:8
+    container_name: electrostock-pgadmin
+    ports:
+      - "5050:80"
+    environment:
+      - PGADMIN_DEFAULT_EMAIL=${PGADMIN_DEFAULT_EMAIL}
+      - PGADMIN_DEFAULT_PASSWORD=${PGADMIN_DEFAULT_PASSWORD}
+    volumes:
+      - electrostock-pgadmin-data:/var/lib/pgadmin
+    depends_on:
+      postgres:
+        condition: service_healthy
+    networks:
+      - electrostock-network
+    restart: unless-stopped
+
+# ─── Networks ─────────────────────────────────────────────────────────────
+networks:
+  electrostock-network:
+    driver: bridge
+
+# ─── Volumes ──────────────────────────────────────────────────────────────
+volumes:
+  electrostock-postgres-data:
+    driver: local
+  electrostock-localstack-data:
+    driver: local
+  electrostock-pgadmin-data:
+    driver: local

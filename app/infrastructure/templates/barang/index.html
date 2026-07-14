@@ -1,0 +1,234 @@
+{% extends 'base.html' %}
+
+{% block title %}Kelola Barang - ElectroStock{% endblock %}
+
+{% block content %}
+<div class="row pt-2 mb-3 align-items-center">
+    <div class="col-md-8">
+        <h1 class="hero-title mb-1">Kelola Barang</h1>
+        <p class="text-muted">Kelola inventaris barang elektronik, kelola stok, dan lokasi penyimpanan rak.</p>
+    </div>
+    <div class="col-md-4 text-md-end">
+        <a href="{{ url_for('barang.create') }}" class="btn-primary d-inline-flex text-decoration-none">
+            <i data-lucide="plus" style="width: 18px; height: 18px;"></i> Tambah Barang
+        </a>
+    </div>
+</div>
+
+{% with messages = get_flashed_messages(with_categories=true) %}
+{% if messages %}
+{% for category, message in messages %}
+<div class="alert alert-{{ category }} alert-dismissible fade show" role="alert">
+    {{ message }}
+    <button type="button" class="btn-close btn-close-white" data-bs-dismiss="alert" aria-label="Close"></button>
+</div>
+{% endfor %}
+{% endif %}
+{% endwith %}
+
+<!-- Filter & Search Section -->
+<div class="card mb-4">
+    <div class="card-body p-0">
+        <form action="{{ url_for('barang.index') }}" method="GET" class="row g-3">
+            <!-- Search Bar -->
+            <div class="col-md-5">
+                <label for="search" class="form-label">Cari Barang</label>
+                <input type="text" id="search" name="search" class="form-control"
+                    placeholder="Cari Kode, Nama Barang, atau Merk..." value="{{ search_query or '' }}">
+            </div>
+
+            <!-- Category Filter -->
+            <div class="col-md-4">
+                <label for="category_id" class="form-label">Kategori</label>
+                <select id="category_id" name="category_id" class="form-select">
+                    <option value="">Semua Kategori</option>
+                    {% for cat in categories %}
+                    <option value="{{ cat.id }}" {% if selected_category==cat.id %}selected{% endif %}>{{ cat.nama }}
+                    </option>
+                    {% endfor %}
+                </select>
+            </div>
+
+            <!-- Action Buttons -->
+            <div class="col-md-3 d-flex align-items-end gap-2">
+                <button type="submit" class="btn-primary w-100" style="padding: 14px 16px !important;">
+                    <i data-lucide="filter" style="width: 16px; height: 16px;"></i> Filter
+                </button>
+                {% if search_query or selected_category %}
+                <a href="{{ url_for('barang.index') }}" class="btn-secondary" style="padding: 14px 16px !important;">
+                    <i data-lucide="rotate-ccw" style="width: 16px; height: 16px;"></i> Reset
+                </a>
+                {% endif %}
+            </div>
+        </form>
+    </div>
+</div>
+
+<!-- Barang Table Card -->
+<div class="card card-table mb-5">
+    <div class="card-body p-0">
+        {% if items %}
+        <div class="table-responsive">
+            <table class="table align-middle barang-table">
+                <thead>
+                    <tr>
+                        <th class="col-barang-foto">Foto</th>
+                        <th class="col-barang-kode">Kode</th>
+                        <th class="col-barang-nama">Nama Barang</th>
+                        <th class="col-barang-kategori">Kategori</th>
+                        <th class="col-barang-merk">Merk</th>
+                        <th class="col-barang-harga text-end">Harga</th>
+                        <th class="col-barang-stok text-center">Stok</th>
+                        <th class="col-barang-rak text-center">Rak</th>
+                        <th class="col-barang-aksi text-end">Aksi</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for item in items %}
+                    <tr>
+                        <td>
+                            {% if item.foto_s3_key %}
+                            <img src="{{ item.foto_s3_key | s3_url }}" alt="{{ item.nama_barang }}" class="rounded photo-thumb"
+                                style="width: 36px; height: 36px; object-fit: cover; border: 1px solid var(--border-color); border-radius: var(--rounded-default) !important; cursor: pointer;"
+                                onclick="openPhotoModal(this.src, '{{ item.nama_barang }}', '{{ item.kode_barang }}')">
+                            {% else %}
+                            <div class="rounded d-flex align-items-center justify-content-center"
+                                style="width: 36px; height: 36px; background: var(--color-surface-container-high); border: 1px dashed var(--border-color); color: var(--text-muted);">
+                                <i data-lucide="package" style="width: 16px; height: 16px;"></i>
+                            </div>
+                            {% endif %}
+                        </td>
+                        <td class="font-mono text-cyan fw-semibold" style="font-size: 0.8rem;">{{ item.kode_barang }}</td>
+                        <td class="text-white fw-medium">
+                            <span class="barang-nama-text" title="{{ item.nama_barang }}">{{ item.nama_barang }}</span>
+                        </td>
+                        <td class="text-secondary barang-cell-truncate" title="{{ item.kategori.nama }}">{{ item.kategori.nama }}</td>
+                        <td class="text-secondary barang-cell-truncate" title="{{ item.merk or '-' }}">{{ item.merk or '-' }}</td>
+                        <td class="text-end font-mono" style="font-size: 0.8rem;">Rp {{ "{:,.0f}".format(item.harga) }}</td>
+                        <td class="text-center">
+                            {% if item.stok <= 5 %}
+                            <span class="status-pill low-stock font-mono" style="font-size: 0.7rem; padding: 3px 8px;">
+                                <span class="status-dot amber pulse"></span> {{ item.stok }}
+                            </span>
+                            {% else %}
+                            <span class="status-pill in-stock font-mono" style="font-size: 0.7rem; padding: 3px 8px;">
+                                <span class="status-dot green"></span> {{ item.stok }}
+                            </span>
+                            {% endif %}
+
+                            <!-- Custom Inventory Gauge Component -->
+                            <div class="inventory-gauge-container mx-auto" style="max-width: 60px;">
+                                {% set pct = (item.stok / 50 * 100) | round %}
+                                {% if pct > 100 %}{% set pct = 100 %}{% endif %}
+                                <div class="inventory-gauge-bar" {{ 'sty' ~ 'le="width: ' ~ pct ~ '%;"' | safe }}></div>
+                            </div>
+                        </td>
+                        <td class="text-center font-mono text-secondary" style="font-size: 0.8rem;">{{ item.lokasi_rak or '-' }}</td>
+                        <td class="text-end">
+                            <div class="d-inline-flex gap-1 barang-actions">
+                                <a href="{{ url_for('barang.adjust_stock', id=item.id) }}"
+                                    class="btn-secondary barang-action-btn"
+                                    title="Sesuaikan Stok">
+                                    <i data-lucide="shuffle" style="width: 14px; height: 14px;"></i>
+                                </a>
+                                <a href="{{ url_for('barang.edit', id=item.id) }}" class="btn-secondary barang-action-btn"
+                                    title="Edit Barang">
+                                    <i data-lucide="edit-2" style="width: 14px; height: 14px;"></i>
+                                </a>
+                                <form action="{{ url_for('barang.delete', id=item.id) }}" method="POST"
+                                    onsubmit="return confirm('Apakah Anda yakin ingin menghapus barang \'{{ item.nama_barang }}\'?');"
+                                    class="m-0">
+                                    <button type="submit" class="barang-action-btn barang-btn-delete"
+                                        title="Hapus Barang">
+                                        <i data-lucide="trash-2" style="width: 14px; height: 14px;"></i>
+                                    </button>
+                                </form>
+                            </div>
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+
+        <!-- Pagination Section -->
+        {% if pagination.pages > 1 %}
+        <nav class="d-flex justify-content-center mt-4">
+            <ul class="pagination mb-0 gap-1">
+                <!-- Previous Button -->
+                <li class="page-item {% if not pagination.has_prev %}disabled{% endif %}">
+                    <a class="page-link"
+                        href="{{ url_for('barang.index', page=pagination.prev_num, search=search_query, category_id=selected_category) }}">Prev</a>
+                </li>
+
+                <!-- Page Numbers -->
+                {% for page_num in pagination.iter_pages(left_edge=1, right_edge=1, left_current=2, right_current=2) %}
+                {% if page_num %}
+                <li class="page-item {% if page_num == pagination.page %}active{% endif %}">
+                    <a class="page-link"
+                        href="{{ url_for('barang.index', page=page_num, search=search_query, category_id=selected_category) }}">
+                        {{ page_num }}
+                    </a>
+                </li>
+                {% else %}
+                <li class="page-item disabled"><span class="page-link">...</span></li>
+                {% endif %}
+                {% endfor %}
+
+                <!-- Next Button -->
+                <li class="page-item {% if not pagination.has_next %}disabled{% endif %}">
+                    <a class="page-link"
+                        href="{{ url_for('barang.index', page=pagination.next_num, search=search_query, category_id=selected_category) }}">Next</a>
+                </li>
+            </ul>
+        </nav>
+        {% endif %}
+
+        {% else %}
+        <div class="empty-state">
+            <div class="empty-state-icon">
+                <i data-lucide="package-open" class="text-muted" style="width: 48px; height: 48px;"></i>
+            </div>
+            <p class="text-muted mt-3 mb-0">Tidak ada barang yang ditemukan.</p>
+        </div>
+        {% endif %}
+    </div>
+</div>
+
+<!-- Photo Preview Modal -->
+<div class="photo-modal-overlay" id="photoModal" onclick="closePhotoModal(event)">
+    <div class="photo-modal-card" style="position: relative;">
+        <button class="photo-modal-close" onclick="closePhotoModal(event, true)" title="Tutup">
+            <i data-lucide="x" style="width: 14px; height: 14px;"></i>
+        </button>
+        <img id="photoModalImg" src="" alt="Preview">
+        <div class="photo-modal-name" id="photoModalName"></div>
+        <div class="photo-modal-code" id="photoModalCode"></div>
+    </div>
+</div>
+
+<script>
+function openPhotoModal(src, name, code) {
+    const modal = document.getElementById('photoModal');
+    document.getElementById('photoModalImg').src = src;
+    document.getElementById('photoModalName').textContent = name;
+    document.getElementById('photoModalCode').textContent = code;
+    modal.classList.add('active');
+    document.body.style.overflow = 'hidden';
+    // Reinitialize lucide icons for the close button
+    if (typeof lucide !== 'undefined') lucide.createIcons();
+}
+function closePhotoModal(event, force) {
+    if (force || event.target.id === 'photoModal') {
+        document.getElementById('photoModal').classList.remove('active');
+        document.body.style.overflow = '';
+    }
+}
+document.addEventListener('keydown', (e) => {
+    if (e.key === 'Escape') {
+        document.getElementById('photoModal')?.classList.remove('active');
+        document.body.style.overflow = '';
+    }
+});
+</script>
+{% endblock %}

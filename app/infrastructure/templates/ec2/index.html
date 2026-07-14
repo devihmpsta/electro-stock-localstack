@@ -1,0 +1,152 @@
+{% extends 'base.html' %}
+
+{% block title %}EC2 Monitor - ElectroStock{% endblock %}
+
+{% block content %}
+<div class="row pt-2 mb-3 align-items-center">
+    <div class="col-md-8">
+        <h1 class="hero-title mb-1">EC2 Instance Monitor</h1>
+        <p class="text-muted">Pantau status, jalankan, matikan, dan kelola instance Amazon EC2 di LocalStack.</p>
+    </div>
+</div>
+
+{% with messages = get_flashed_messages(with_categories=true) %}
+    {% if messages %}
+        {% for category, message in messages %}
+            <div class="alert alert-{{ category }} alert-dismissible fade show" role="alert">
+                {{ message }}
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="alert" aria-label="Close"></button>
+            </div>
+        {% endfor %}
+    {% endif %}
+{% endwith %}
+
+<div class="row g-4 mb-5">
+    <!-- Form Launch Instance -->
+    <div class="col-md-4">
+        <div class="card h-100">
+            <div class="card-header mb-4">
+                <h5 class="card-title fw-bold text-white d-flex align-items-center gap-2">
+                    <i data-lucide="rocket" class="text-cyan" style="width: 20px; height: 20px;"></i> Luncurkan Instance
+                </h5>
+            </div>
+            <div class="card-body p-0">
+                <form action="{{ url_for('ec2.create') }}" method="POST">
+                    <div class="form-group mb-3">
+                        <label for="name" class="form-label">Nama Instance (Tag Name)</label>
+                        <input type="text" id="name" name="name" class="form-control" placeholder="Contoh: Web-Server-01" required autocomplete="off">
+                    </div>
+
+                    <div class="form-group mb-4">
+                        <label for="instance_type" class="form-label">Tipe Instance</label>
+                        <select id="instance_type" name="instance_type" class="form-select" required>
+                            <option value="t2.micro">t2.micro (1 vCPU, 1 GiB RAM)</option>
+                            <option value="t2.small">t2.small (1 vCPU, 2 GiB RAM)</option>
+                            <option value="t2.medium">t2.medium (2 vCPU, 4 GiB RAM)</option>
+                        </select>
+                    </div>
+
+                    <button type="submit" class="btn-primary w-100">
+                        <i data-lucide="play" style="width: 18px; height: 18px;"></i> Luncurkan Instance
+                    </button>
+                </form>
+            </div>
+        </div>
+    </div>
+
+    <!-- List EC2 Instances -->
+    <div class="col-md-8">
+        <div class="card card-table h-100">
+            <div class="card-header mb-4">
+                <h5 class="card-title fw-bold text-white d-flex align-items-center gap-2">
+                    <i data-lucide="server" class="text-cyan" style="width: 20px; height: 20px;"></i> Daftar Instance
+                </h5>
+            </div>
+            <div class="card-body p-0">
+                {% if instances %}
+                <div class="table-responsive">
+                    <table class="table align-middle">
+                        <thead>
+                            <tr>
+                                <th>Nama (Tag)</th>
+                                <th>Instance ID</th>
+                                <th>Tipe</th>
+                                <th class="text-center" style="width: 120px;">Status</th>
+                                <th>IP Publik</th>
+                                <th class="text-end" style="width: 260px;">Aksi</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for inst in instances %}
+                            <tr>
+                                <td class="fw-semibold text-white">{{ inst.name }}</td>
+                                <td class="font-mono text-cyan" style="font-size: 0.8rem;">{{ inst.instance_id }}</td>
+                                <td class="font-mono text-secondary" style="font-size: 0.8rem;">{{ inst.instance_type }}</td>
+                                <td class="text-center">
+                                    {% if inst.state == 'running' %}
+                                    <span class="status-pill in-stock font-mono">
+                                        <span class="status-dot green pulse"></span> running
+                                    </span>
+                                    {% elif inst.state == 'stopped' %}
+                                    <span class="status-pill out-of-stock font-mono">
+                                        <span class="status-dot red"></span> stopped
+                                    </span>
+                                    {% elif inst.state == 'terminated' %}
+                                    <span class="status-pill font-mono" style="background: rgba(100, 116, 139, 0.12) !important; color: #cbd5e1 !important; border: 1px solid rgba(100, 116, 139, 0.2) !important;">
+                                        <span class="status-dot" style="background-color: #cbd5e1;"></span> terminated
+                                    </span>
+                                    {% else %}
+                                    <span class="status-pill low-stock font-mono">
+                                        <span class="status-dot amber pulse"></span> {{ inst.state }}
+                                    </span>
+                                    {% endif %}
+                                </td>
+                                <td class="font-mono text-secondary" style="font-size: 0.8rem;">{{ inst.public_ip }}</td>
+                                <td class="text-end">
+                                    <div class="d-inline-flex gap-2">
+                                        <!-- Start Button -->
+                                        {% if inst.state == 'stopped' %}
+                                        <form action="{{ url_for('ec2.start', id=inst.instance_id) }}" method="POST" class="m-0">
+                                            <button type="submit" class="btn-secondary text-success px-3 py-1" style="font-size: 0.8rem; padding: 6px 12px !important; color: var(--color-emerald) !important;">
+                                                <i data-lucide="play-circle" style="width: 14px; height: 14px;"></i> Start
+                                            </button>
+                                        </form>
+                                        {% endif %}
+
+                                        <!-- Stop Button -->
+                                        {% if inst.state == 'running' %}
+                                        <form action="{{ url_for('ec2.stop', id=inst.instance_id) }}" method="POST" class="m-0">
+                                            <button type="submit" class="btn-secondary text-warning px-3 py-1" style="font-size: 0.8rem; padding: 6px 12px !important; color: var(--color-tertiary-container) !important;">
+                                                <i data-lucide="stop-circle" style="width: 14px; height: 14px;"></i> Stop
+                                            </button>
+                                        </form>
+                                        {% endif %}
+
+                                        <!-- Terminate Button -->
+                                        {% if inst.state != 'terminated' and inst.state != 'shutting-down' %}
+                                        <form action="{{ url_for('ec2.terminate', id=inst.instance_id) }}" method="POST" onsubmit="return confirm('Apakah Anda yakin ingin melakukan TERMINATE pada instance ini?');" class="m-0">
+                                            <button type="submit" class="btn-secondary text-danger px-3 py-1" style="font-size: 0.8rem; padding: 6px 12px !important; color: var(--color-error) !important;">
+                                                <i data-lucide="trash-2" style="width: 14px; height: 14px;"></i> Terminate
+                                            </button>
+                                        </form>
+                                        {% endif %}
+                                    </div>
+                                </td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+                {% else %}
+                <div class="empty-state">
+                    <div class="empty-state-icon">
+                        <i data-lucide="server-off" class="text-muted" style="width: 48px; height: 48px;"></i>
+                    </div>
+                    <p class="text-muted mt-3 mb-0">Belum ada instance EC2 yang diluncurkan.</p>
+                </div>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

@@ -1,0 +1,198 @@
+{% extends 'base.html' %}
+
+{% block title %}Kelola Kategori - ElectroStock{% endblock %}
+
+{% block content %}
+<div class="row pt-2 mb-3 align-items-center">
+    <div class="col-md-8">
+        <h1 class="hero-title mb-1">Kelola Kategori</h1>
+        <p class="text-muted">Kelola kategori barang untuk mempermudah pengelompokan inventaris.</p>
+    </div>
+</div>
+
+{% with messages = get_flashed_messages(with_categories=true) %}
+    {% if messages %}
+        {% for category, message in messages %}
+            <div class="alert alert-{{ category }} alert-dismissible fade show" role="alert">
+                {{ message }}
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="alert" aria-label="Close"></button>
+            </div>
+        {% endfor %}
+    {% endif %}
+{% endwith %}
+
+<div class="row g-4 mb-5">
+    <!-- Form Tambah Kategori -->
+    <div class="col-md-4">
+        <div class="card h-100">
+            <div class="card-header mb-4">
+                <h5 class="card-title fw-bold text-white d-flex align-items-center gap-2">
+                    <i data-lucide="plus-circle" class="text-cyan" style="width: 20px; height: 20px;"></i> Tambah Kategori
+                </h5>
+            </div>
+            <div class="card-body p-0">
+                <form action="{{ url_for('kategori.create') }}" method="POST">
+                    <div class="form-group mb-4">
+                        <label for="nama" class="form-label">Nama Kategori</label>
+                        <input type="text" id="nama" name="nama" class="form-control" placeholder="Contoh: Gadget, Alat Rumah Tangga" required autocomplete="off">
+                        <div class="form-text text-muted mt-2 font-sans" style="font-size: 0.75rem;">Nama kategori tidak boleh duplikat dan harus unik.</div>
+                    </div>
+                    <button type="submit" class="btn-primary w-100">
+                        <i data-lucide="save" style="width: 18px; height: 18px;"></i> Simpan Kategori
+                    </button>
+                </form>
+            </div>
+        </div>
+    </div>
+
+    <!-- Daftar Kategori & Search -->
+    <div class="col-md-8">
+        <div class="card card-table h-100">
+            <div class="card-header d-flex flex-column flex-sm-row justify-content-between align-items-sm-center gap-3 mb-4">
+                <h5 class="card-title fw-bold text-white d-flex align-items-center gap-2">
+                    <i data-lucide="list" class="text-cyan" style="width: 20px; height: 20px;"></i> Daftar Kategori
+                </h5>
+                
+                <!-- Search Form -->
+                <form action="{{ url_for('kategori.index') }}" method="GET" class="d-flex gap-2" style="max-width: 320px;">
+                    <div class="input-group">
+                        <input type="text" name="search" class="form-control" placeholder="Cari kategori..." value="{{ search_query or '' }}" style="padding: 8px 12px !important;">
+                        <button class="btn-primary" type="submit" style="padding: 8px 12px !important; border-radius: 0 var(--rounded-default) var(--rounded-default) 0 !important;">
+                            <i data-lucide="search" style="width: 16px; height: 16px;"></i>
+                        </button>
+                        {% if search_query %}
+                        <a href="{{ url_for('kategori.index') }}" class="btn-secondary d-flex align-items-center justify-content-center px-3" style="border-radius: var(--rounded-default); margin-left: 4px;">
+                            <i data-lucide="x" style="width: 16px; height: 16px;"></i>
+                        </a>
+                        {% endif %}
+                    </div>
+                </form>
+            </div>
+            
+            <div class="card-body p-0">
+                {% if categories %}
+                <div class="table-responsive">
+                    <table class="table align-middle kategori-table">
+                        <thead>
+                            <tr>
+                                <th class="col-kategori-no">No</th>
+                                <th class="col-kategori-icon">Ikon</th>
+                                <th class="col-kategori-nama">Nama Kategori</th>
+                                <th class="col-kategori-jumlah text-center">Jumlah Barang</th>
+                                <th class="col-kategori-aksi text-end">Aksi</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for cat in categories %}
+                            <tr>
+                                <td class="col-kategori-no font-mono">{{ loop.index }}</td>
+                                <td class="col-kategori-icon">
+                                    {% set nama_lower = cat.nama | lower %}
+                                    {% if 'laptop' in nama_lower or 'notebook' in nama_lower %}
+                                        {% set icon_name = 'laptop' %}
+                                        {% set icon_color = '#60a5fa' %}
+                                    {% elif 'phone' in nama_lower or 'hp' in nama_lower or 'ponsel' in nama_lower or 'smartphone' in nama_lower or 'handphone' in nama_lower %}
+                                        {% set icon_name = 'smartphone' %}
+                                        {% set icon_color = '#a78bfa' %}
+                                    {% elif 'tablet' in nama_lower or 'ipad' in nama_lower %}
+                                        {% set icon_name = 'tablet' %}
+                                        {% set icon_color = '#f472b6' %}
+                                    {% elif 'audio' in nama_lower or 'speaker' in nama_lower or 'headphone' in nama_lower or 'earphone' in nama_lower or 'headset' in nama_lower or 'sound' in nama_lower %}
+                                        {% set icon_name = 'headphones' %}
+                                        {% set icon_color = '#fb923c' %}
+                                    {% elif 'kamera' in nama_lower or 'camera' in nama_lower or 'foto' in nama_lower %}
+                                        {% set icon_name = 'camera' %}
+                                        {% set icon_color = '#f87171' %}
+                                    {% elif 'tv' in nama_lower or 'televisi' in nama_lower or 'monitor' in nama_lower or 'display' in nama_lower or 'layar' in nama_lower %}
+                                        {% set icon_name = 'monitor' %}
+                                        {% set icon_color = '#4ade80' %}
+                                    {% elif 'printer' in nama_lower or 'cetak' in nama_lower or 'scanner' in nama_lower %}
+                                        {% set icon_name = 'printer' %}
+                                        {% set icon_color = '#94a3b8' %}
+                                    {% elif 'keyboard' in nama_lower or 'mouse' in nama_lower or 'aksesori' in nama_lower or 'aksesoris' in nama_lower or 'accessori' in nama_lower or 'peripheral' in nama_lower %}
+                                        {% set icon_name = 'keyboard' %}
+                                        {% set icon_color = '#e879f9' %}
+                                    {% elif 'jaringan' in nama_lower or 'network' in nama_lower or 'router' in nama_lower or 'wifi' in nama_lower or 'modem' in nama_lower %}
+                                        {% set icon_name = 'wifi' %}
+                                        {% set icon_color = '#22d3ee' %}
+                                    {% elif 'storage' in nama_lower or 'hardisk' in nama_lower or 'harddisk' in nama_lower or 'ssd' in nama_lower or 'flash' in nama_lower or 'memory' in nama_lower or 'ram' in nama_lower or 'penyimpanan' in nama_lower %}
+                                        {% set icon_name = 'hard-drive' %}
+                                        {% set icon_color = '#fbbf24' %}
+                                    {% elif 'komponen' in nama_lower or 'component' in nama_lower or 'prosesor' in nama_lower or 'processor' in nama_lower or 'cpu' in nama_lower or 'gpu' in nama_lower or 'motherboard' in nama_lower %}
+                                        {% set icon_name = 'cpu' %}
+                                        {% set icon_color = '#34d399' %}
+                                    {% elif 'kabel' in nama_lower or 'cable' in nama_lower or 'charger' in nama_lower or 'adapter' in nama_lower or 'power' in nama_lower or 'baterai' in nama_lower or 'battery' in nama_lower %}
+                                        {% set icon_name = 'cable' %}
+                                        {% set icon_color = '#f97316' %}
+                                    {% elif 'gadget' in nama_lower or 'wearable' in nama_lower or 'smartwatch' in nama_lower or 'jam' in nama_lower %}
+                                        {% set icon_name = 'watch' %}
+                                        {% set icon_color = '#2dd4bf' %}
+                                    {% elif 'game' in nama_lower or 'gaming' in nama_lower or 'konsol' in nama_lower or 'console' in nama_lower %}
+                                        {% set icon_name = 'gamepad-2' %}
+                                        {% set icon_color = '#818cf8' %}
+                                    {% elif 'rumah' in nama_lower or 'home' in nama_lower or 'appliance' in nama_lower or 'elektronik rumah' in nama_lower %}
+                                        {% set icon_name = 'home' %}
+                                        {% set icon_color = '#a3e635' %}
+                                    {% else %}
+                                        {% set icon_name = 'circuit-board' %}
+                                        {% set icon_color = '#38bdf8' %}
+                                    {% endif %}
+                                    <div class="category-icon-cell d-flex align-items-center justify-content-center"
+                                        style="width: 36px; height: 36px; border-radius: var(--rounded-default);"
+                                        data-icon-color="{{ icon_color }}">
+                                        <i data-lucide="{{ icon_name }}" style="width: 18px; height: 18px;"></i>
+                                    </div>
+                                </td>
+                                <td class="text-white fw-semibold">{{ cat.nama }}</td>
+                                <td class="text-center">
+                                    <span class="status-pill in-stock font-mono" style="font-size: 0.75rem; padding: 3px 8px;">
+                                        {{ cat.barang_list|length }}
+                                    </span>
+                                </td>
+                                <td class="text-end">
+                                    <div class="d-inline-flex align-items-center gap-1">
+                                        <a href="{{ url_for('kategori.edit', id=cat.id) }}" class="btn-secondary barang-action-btn" style="font-size: 0.8rem; padding: 6px 12px !important; display: inline-flex; align-items: center; gap: 4px; height: 32px;">
+                                            <i data-lucide="edit-2" style="width: 14px; height: 14px;"></i> Edit
+                                        </a>
+                                        
+                                        <!-- Delete Form with confirmation -->
+                                        <form action="{{ url_for('kategori.delete', id=cat.id) }}" method="POST" onsubmit="return confirm('Apakah Anda yakin ingin menghapus kategori \'{{ cat.nama }}\'?');" class="m-0">
+                                            <button type="submit" class="barang-action-btn barang-btn-delete" title="Delete">
+                                                <i data-lucide="trash-2" style="width: 14px; height: 14px;"></i>
+                                            </button>
+                                        </form>
+                                    </div>
+                                </td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+                {% else %}
+                <div class="empty-state">
+                    <div class="empty-state-icon">
+                        <i data-lucide="folder-open" class="text-muted" style="width: 48px; height: 48px;"></i>
+                    </div>
+                    <p class="text-muted mt-3 mb-0">Tidak ada kategori yang ditemukan.</p>
+                </div>
+                {% endif %}
+            </div>
+    </div>
+</div>
+
+<script>
+    document.addEventListener('DOMContentLoaded', function () {
+        document.querySelectorAll('.category-icon-cell[data-icon-color]').forEach(function (el) {
+            var color = el.getAttribute('data-icon-color');
+            if (color) {
+                el.style.backgroundColor = color + '15';
+                el.style.border = '1px solid ' + color + '30';
+                var icon = el.querySelector('i');
+                if (icon) {
+                    icon.style.color = color;
+                }
+            }
+        });
+    });
+</script>
+{% endblock %}

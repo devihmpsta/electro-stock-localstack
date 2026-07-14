@@ -1,0 +1,104 @@
+{% extends 'base.html' %}
+
+{% block title %}Penyesuaian Stok - {{ item.nama_barang }} - ElectroStock{% endblock %}
+
+{% block content %}
+<div class="row pt-4 mb-4 align-items-center">
+    <div class="col-md-8">
+        <h1 class="hero-title mb-1">Penyesuaian Stok</h1>
+        <p class="text-muted">Perbarui tingkat stok barang dengan mencatat transaksi masuk atau keluar.</p>
+    </div>
+</div>
+
+{% with messages = get_flashed_messages(with_categories=true) %}
+    {% if messages %}
+        {% for category, message in messages %}
+            <div class="alert alert-{{ category }} alert-dismissible fade show" role="alert">
+                {{ message }}
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="alert" aria-label="Close"></button>
+            </div>
+        {% endfor %}
+    {% endif %}
+{% endwith %}
+
+<div class="row justify-content-center mb-5">
+    <div class="col-md-6">
+        <!-- Item Info Card -->
+        <div class="card mb-4">
+            <div class="card-body p-2 d-flex align-items-center gap-4">
+                {% if item.foto_s3_key %}
+                <img src="{{ item.foto_s3_key | s3_url }}" alt="{{ item.nama_barang }}" class="rounded" style="width: 72px; height: 72px; object-fit: cover; border: 1px solid var(--border-color); border-radius: var(--rounded-default) !important;">
+                {% else %}
+                <div class="rounded d-flex align-items-center justify-content-center" style="width: 72px; height: 72px; background: var(--color-surface-container-high); border: 1px dashed var(--border-color); color: var(--text-muted);">
+                    <i data-lucide="package" style="width: 28px; height: 28px;"></i>
+                </div>
+                {% endif %}
+                <div>
+                    <span class="text-cyan font-mono" style="font-size: 0.8rem; font-weight: 600;">{{ item.kode_barang }}</span>
+                    <h5 class="text-white fw-bold mb-1">{{ item.nama_barang }}</h5>
+                    <p class="text-secondary mb-0" style="font-size: 0.9rem;">
+                        Stok Saat Ini: 
+                        <strong class="font-mono {% if item.stok <= 5 %}text-danger{% else %}text-success{% endif %}">
+                            {{ item.stok }} unit
+                        </strong>
+                    </p>
+                </div>
+            </div>
+        </div>
+
+        <!-- Adjustment Form Card -->
+        <div class="card">
+            <div class="card-header mb-4">
+                <h5 class="card-title fw-bold text-white d-flex align-items-center gap-2">
+                    <i data-lucide="shuffle" class="text-cyan" style="width: 20px; height: 20px;"></i> Transaksi Penyesuaian
+                </h5>
+            </div>
+            <div class="card-body p-0">
+                <form action="{{ url_for('barang.adjust_stock', id=item.id) }}" method="POST">
+                    <!-- Transaction Type -->
+                    <div class="form-group mb-4">
+                        <label class="form-label">Jenis Transaksi</label>
+                        <div class="d-flex gap-4 mt-2">
+                            <div class="form-check">
+                                <input class="form-check-input" type="radio" name="jenis_transaksi" id="masuk" value="masuk" checked>
+                                <label class="form-check-label text-white d-flex align-items-center gap-1" for="masuk">
+                                    <i data-lucide="arrow-down-left" class="text-success" style="width: 16px; height: 16px;"></i> Stok Masuk (Tambah)
+                                </label>
+                            </div>
+                            <div class="form-check">
+                                <input class="form-check-input" type="radio" name="jenis_transaksi" id="keluar" value="keluar">
+                                <label class="form-check-label text-white d-flex align-items-center gap-1" for="keluar">
+                                    <i data-lucide="arrow-up-right" class="text-danger" style="width: 16px; height: 16px;"></i> Stok Keluar (Kurang)
+                                </label>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Quantity -->
+                    <div class="form-group mb-3">
+                        <label for="jumlah" class="form-label">Jumlah Unit</label>
+                        <input type="number" min="1" id="jumlah" name="jumlah" class="form-control font-mono" placeholder="Masukkan jumlah unit" required>
+                        <div class="form-text text-muted" style="font-size: 0.75rem; margin-top: 0.5rem;">Jumlah harus berupa angka positif minimal 1.</div>
+                    </div>
+
+                    <!-- Notes -->
+                    <div class="form-group mb-4">
+                        <label for="keterangan" class="form-label">Keterangan / Catatan</label>
+                        <textarea id="keterangan" name="keterangan" class="form-control" rows="3" placeholder="Tulis alasan penyesuaian stok (contoh: Restock bulanan, barang rusak, penjualan offline)..." required></textarea>
+                    </div>
+
+                    <!-- Buttons -->
+                    <div class="d-flex gap-3">
+                        <a href="{{ url_for('barang.index') }}" class="btn-secondary w-50">
+                            <i data-lucide="corner-up-left" style="width: 18px; height: 18px;"></i> Batal
+                        </a>
+                        <button type="submit" class="btn-primary w-50 m-0">
+                            <i data-lucide="check" style="width: 18px; height: 18px;"></i> Proses Penyesuaian
+                        </button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

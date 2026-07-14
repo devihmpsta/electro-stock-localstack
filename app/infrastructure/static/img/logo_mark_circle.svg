@@ -1,0 +1,13 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32" width="32" height="32">
+  <defs>
+    <linearGradient id="eGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#568dff" />
+      <stop offset="100%" stop-color="#0058cb" />
+    </linearGradient>
+  </defs>
+  <circle cx="16" cy="16" r="15" fill="#0b1326" stroke="#222a3d" stroke-width="1" />
+  <g transform="translate(3, 3) scale(0.26)">
+    <path d="M 28 20 L 68 20 L 62 34 L 40 34 L 37 43 L 60 43 L 52 57 L 33 57 L 27 75 L 67 75 L 61 89 L 18 89 Z" fill="url(#eGrad)" />
+    <path d="M 52 38 L 28 62 L 42 62 L 32 82 L 58 54 L 44 54 Z" fill="#ffffff" />
+  </g>
+</svg>
